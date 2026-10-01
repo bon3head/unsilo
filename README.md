@@ -1,3 +1,7 @@
+> **Status: research in progress.** S1-S10 sessions are complete but
+> blockers B1, B9, and B10 are still open and final approval is pending. Nothing
+> in this repo is a finished specification.
+>
 # UnSilo v1 research chain — final approval and reconciliation drive package
 
 ## Lifecycle
