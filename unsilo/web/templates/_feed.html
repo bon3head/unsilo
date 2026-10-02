@@ -1,0 +1,16 @@
+<ul class="feed" id="feed-list">
+{% for r in feed %}
+  <li>
+    <span>{{ fmt.instant(r.t_kind, r.t_value, r.t_gran, r.t_zone, r.t_text) }}</span>
+    <span class="dim">{{ r.tag }}</span>
+    <span><span class="ttl">{{ r.title }}</span>
+      {% if r.verdict_axis %} <span class="pill p-{{ r.verdict_axis }}" title="audit verdict (operator taxonomy)">{{ r.verdict_axis }}</span>
+      <span class="pill dim" title="evidence class (RECON-ECLASS)">{{ r.eclass_axis }}</span>{% endif %}
+      {% if r.body %}<br><span class="body">{{ r.body }}</span>{% endif %}
+      <br><span class="dim">recorded {{ fmt.utc_to_et(r.recorded_at) }} · receipt #{{ r.receipt_id }} · {{ r.item_kind|lower }}</span>
+    </span>
+  </li>
+{% else %}
+  <li><span class="dim">no items match{% if q %} "{{ q }}"{% endif %}{% if tag %} in {{ tag }}{% endif %}</span></li>
+{% endfor %}
+</ul>

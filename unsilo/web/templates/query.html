@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Query {{ name }}{% endblock %}
+{% block body %}
+<header><h1>UNSILO / docket</h1><span class="tag">panel query: {{ name }}</span><span class="sub"><a href="/?eff={{ cut.eff_value }}&k={{ cut.k }}">back to the dashboard at this cut</a></span></header>
+<main>
+<section><h2>Bound cut</h2><pre>{% for k, v in params.items() %}:{{ k }} = {{ v }}
+{% endfor %}</pre></section>
+<section><h2>SQL (Docket panel; evidence panels open a QueryDefinition instead, S8)</h2><pre>{{ sql }}</pre></section>
+</main>
+{% endblock %}

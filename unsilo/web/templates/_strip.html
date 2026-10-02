@@ -1,0 +1,24 @@
+{% macro strip(rows, bedrock, cut, csrf, where) %}
+<section class="strip" aria-label="Blockers ({{ where }})">
+  <h2>Blockers <span class="dim">({{ rows|length }} non-terminal at cut, {{ where }})</span> <a href="/query/blockers?eff={{ cut.eff_value }}&k={{ cut.k }}">query</a></h2>
+  {% for b in rows %}
+  <div class="row">
+    <div><span class="id">{{ b.program|replace('_', ' ') }} {{ b.code }}</span>{% if b.head_count > 1 %} <span class="pill p-OPEN">CONFLICT: {{ b.head_count }} heads</span>{% endif %}</div>
+    <div>
+      <span class="pill p-{{ b.state }}">{{ b.state }}</span>
+      {{ b.title }}
+      <span class="dim">· as of {{ fmt.instant(b.asof_kind, b.asof_value, b.asof_gran, b.asof_zone, b.asof_text) }}</span>
+      <span class="t-{{ b.in_effect }}" title="{{ b.in_effect_reason }}">· B4 at cut: {{ b.in_effect }}</span>
+      <br><span class="dim">falsifier:</span> {% if b.falsifier_state == 'STATED' %}{{ b.falsifier }}{% else %}<span class="unknown">UNKNOWN</span>{% endif %}
+      <span class="dim">· owner:</span> {% if b.owner_state == 'STATED' %}{{ b.owner }}{% else %}<span class="unknown">UNKNOWN</span>{% endif %}
+      {% if b.history_len > 1 %}<span class="dim">· {{ b.history_len }} recorded states</span>{% endif %}
+      {% for a in b.actions %}
+      <br><span class="dim">action:</span> {{ a.text }}
+      <form class="inline" method="post" action="/write/action"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="item_id" value="{{ a.item_id }}"><input type="hidden" name="state_id" value="{{ a.state_id }}"><button name="status" value="DONE">done</button> <button name="status" value="DROPPED">drop</button></form>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  {% if bedrock %}<div class="dim" style="padding-top:4px">Bedrock (FROZEN, not on the strip): {% for b in bedrock %}{{ b.code }}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+</section>
+{% endmacro %}

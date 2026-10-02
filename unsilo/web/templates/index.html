@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "_strip.html" import strip as blocker_strip %}
+{% block body %}
+<header>
+  <h1>UNSILO / docket</h1><span class="tag">the people's anti-palantir</span>
+  <span class="sub">absence as signal. What institutions don't publish is first-class data. Operator records: every row below is an OPERATOR RECORD with a receipt, not an evidence result.</span>
+</header>
+<main>
+<form class="cutbar" method="get" action="/">
+  <span>Cut: {{ cut.label() }}{% if not cut.explicit %} <span class="dim">(declared from the clock at request time)</span>{% endif %}</span>
+  <label>eff <input name="eff" value="{{ cut.eff_value }}" size="10" pattern="\d{4}-\d{2}-\d{2}"></label>
+  <label>knowledge <input name="k" value="{{ cut.k }}" size="20" pattern="\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z"></label>
+  <button>pin cut</button> <a href="/">now</a>
+</form>
+
+{{ blocker_strip(strip, bedrock, cut, csrf, "top") }}
+
+<section>
+  <h2>Applications <span class="dim">({{ cards|length }})</span> <a href="/query/applications?eff={{ cut.eff_value }}&k={{ cut.k }}">query</a> <a href="/query/terms?eff={{ cut.eff_value }}&k={{ cut.k }}">terms</a> <a href="/query/actions?eff={{ cut.eff_value }}&k={{ cut.k }}">actions</a></h2>
+  <div class="cards">
+  {% for c in cards %}
+    <article class="card">
+      <h3><span>{{ c.app.employer_label }}</span>
+        <span>{% for s in c.states %}<span class="pill p-{{ s.status }}">{{ s.status|replace('_', ' ') }}</span>{% else %}<span class="pill unknown">NO STATUS</span>{% endfor %}
+        {% if c.actions %}<span class="pill p-ACTION_NEEDED">ACTION NEEDED</span>{% endif %}</span></h3>
+      {% if c.states|length > 1 %}<div class="pill p-OPEN">CONFLICT: {{ c.states|length }} status heads</div>{% endif %}
+      {% for s in c.states %}
+      <div class="dim">{{ fmt.instant(s.ev_kind, s.ev_value, s.ev_gran, s.ev_zone, s.ev_text) }}{% if s.actor_state == 'STATED' %} · by {{ s.actor }}{% endif %}
+        · <span class="t-{{ s.in_effect }}" title="{{ s.in_effect_reason }}">B4 at cut: {{ s.in_effect }}</span></div>
+      {% endfor %}
+      <table>
+      {% for label, value, t in c.rows %}
+        <tr><td class="k">{{ label }}</td><td{% if t.value_kind == 'UNKNOWN' %} class="unknown" title="{{ t.source_text }}"{% else %} title="source: {{ t.source_text }}"{% endif %}>{% if t.term_key == 'posting_url' %}<a href="{{ value }}" rel="noreferrer noopener" target="_blank">{{ value }}</a>{% else %}{{ value }}{% endif %}</td></tr>
+      {% endfor %}
+      </table>
+      {% if c.actions %}
+      <ul class="acts">
+        {% for a in c.actions %}
+        <li>{{ a.text }} <span class="dim">· {{ a.owner }}{% if a.due_kind == 'KNOWN' %} · due {{ fmt.instant(a.due_kind, a.due_value, a.due_gran, a.due_zone, a.due_text) }}{% if a.cut_at_or_after_due == 'TRUE' %} (passed at cut){% endif %}{% else %} · due UNKNOWN{% endif %}</span>
+          <form class="inline" method="post" action="/write/action"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="item_id" value="{{ a.item_id }}"><input type="hidden" name="state_id" value="{{ a.state_id }}"><button name="status" value="DONE">done</button> <button name="status" value="DROPPED">drop</button></form></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <details><summary>record a status change</summary>
+        <form method="post" action="/write/app-status"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="application_id" value="{{ c.app.application_id }}">{% if c.states %}<input type="hidden" name="state_id" value="{{ c.states[0].state_id }}">{% endif %}
+          <select name="status">{% for st in ['SUBMITTED','HELD_FOR_REVIEW','ACTION_NEEDED','REJECTED','WITHDRAWN'] %}<option>{{ st }}</option>{% endfor %}</select>
+          <input name="basis" placeholder="basis (what happened)" size="24"> <button>record</button></form>
+      </details>
+    </article>
+  {% endfor %}
+  </div>
+</section>
+
+<section>
+  <h2>Timeline <span class="dim">(ET days; solid = in effect at cut; hatched = UNKNOWN at cut)</span></h2>
+  {{ timeline }}
+</section>
+
+<section>
+  <h2>Feed <span class="dim">(newest first)</span> <a href="/query/feed?eff={{ cut.eff_value }}&k={{ cut.k }}">query</a></h2>
+  <form class="chips" method="get" action="/" hx-get="/feed" hx-target="#feed" hx-trigger="input delay:250ms, change" hx-push-url="false">
+    <input type="hidden" name="eff" value="{{ cut.eff_value }}"><input type="hidden" name="k" value="{{ cut.k }}">
+    <label><input type="radio" name="tag" value="" {% if not tag %}checked{% endif %}><span>all</span></label>
+    {% for t in tags %}<label><input type="radio" name="tag" value="{{ t }}" {% if tag == t %}checked{% endif %}><span>{{ t }}</span></label>{% endfor %}
+    <input type="search" name="q" value="{{ q }}" placeholder="search title + body" aria-label="search the feed">
+    <noscript><button>filter</button></noscript>
+  </form>
+  <div id="feed">{% include "_feed.html" %}</div>
+  <details><summary>add a note</summary>
+    <form method="post" action="/write/note"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <select name="tag">{% for t in tags %}<option>{{ t }}</option>{% endfor %}</select>
+      <input name="title" placeholder="title" size="30"> <input name="body" placeholder="body" size="60"> <button>add</button></form>
+  </details>
+</section>
+
+<div class="grid2">
+<section>
+  <h2>Audit counts: reported vs rows held <a href="/query/audit_check?eff={{ cut.eff_value }}&k={{ cut.k }}">query</a></h2>
+  <table class="t"><tr><th>count</th><th class="num">reported</th><th class="num">finding rows held</th></tr>
+  {% for a in audit %}<tr><td>{{ a.count_key }}</td><td class="num">{{ a.reported_value }}</td><td class="num">{{ a.findings_held }}</td></tr>{% endfor %}
+  </table>
+  <p class="dim">Counts are stored as the audit reported them (R8). The audit export is not in hand, so findings held are only the named kills, each UNRESOLVED by construction.</p>
+</section>
+<section>
+  <h2>Contract gate vs Docket record <a href="/query/contract_check?eff={{ cut.eff_value }}&k={{ cut.k }}">query</a></h2>
+  <table class="t"><tr><th>contract</th><th>gate (migration)</th><th>Docket</th><th></th></tr>
+  {% for c in contracts %}<tr><td>{{ c.contract_id }}</td><td><span class="pill p-{{ c.gate_status }}">{{ c.gate_status }}</span></td><td>{{ c.docket_state or 'none' }}</td><td class="{% if c.agreement != 'AGREE' %}unknown{% else %}dim{% endif %}">{{ c.agreement }}</td></tr>{% endfor %}
+  </table>
+</section>
+</div>
+
+{{ blocker_strip(strip, bedrock, cut, csrf, "bottom") }}
+</main>
+<footer>
+  Ledger: {{ ledger.receipts }} receipts · head #{{ ledger.head_id }} {{ (ledger.head_sha256 or '')[:16] }} · last write {% if ledger.head_recorded_at %}{{ fmt.utc_to_et(ledger.head_recorded_at) }}{% endif %}
+  · chain verified at startup ({{ gates.ledger.receipts }} receipts, {{ gates.ledger.verify_ms }} ms) · SQLite {{ gates.sqlite }} · tzdata {{ gates.tzdata }} · {{ gates.migrations|length }} migrations hash-checked
+  · <a href="/query/ledger">query</a> · replay: <code>unsilo replay</code>
+</footer>
+{% endblock %}
