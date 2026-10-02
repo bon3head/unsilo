@@ -154,6 +154,23 @@ The dashboard does not reinvent what the program already froze:
   history not ATS state, registrant statements, evidence-coverage
   qualification), never claims about unobserved internal state.
 
+### 2.11 Primary sources mirrored in-repo
+The research-chain primary sources now live in this repo under
+`pack/research-chain/` (21 files, read-only mirror of the Drive folder):
+the canonical ledger (`triage-state-2026-10-01.md`), Foundation v2
+(`repair-foundation-v2-2026-10-01.md`, canonical SHA-256
+`707269c9a2dd0029ca172aea8798e9719902596233ce54123c0c5a5c4bf2310f`),
+the authority-gate decision, all ten S-stage outputs
+(`s1-output-2026-09-30.md` through `s10-output-2026-10-01.md`), the B1/B9
+repair extraction (`part1-b1.md`, `part2-b9.md`, `part3-crosswalk.md`,
+`part4-tail.md`, `full-repair-output.txt`), and the B10 materials
+(`PROVISIONAL-b10-acceptance-artifacts.txt`,
+`PROVISIONAL-b10-repair-output.txt`, quarantined provisional).
+A top-level status file (`UNSILO-STATUS-2026-10-02.md`) with the true
+blocker state, the B1/B9 rollback, and the pending remediation sequence
+is in the Drive folder. Where the master document cites
+`hidden_files/research-chain/...`, read `pack/research-chain/...` here.
+
 ## 3. The approved baseline, layer by layer
 
 The spec and data theory in `pack/` are the APPROVED baseline. They change
