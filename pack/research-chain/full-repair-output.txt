@@ -1,0 +1,1406 @@
+Part 1 — B1-QUERY-DEFINITION-CONTRACT (RECONSTRUCTED)
+Disposition: REPAIRED-PENDING-ADMISSION.
+Authority track: RECONSTRUCTED only.
+Original authority status: U-1R-AUTH-001 remains carried; the original Wave-7 question corpus is not recovered. This contract defines the reconstructed semantic surface only and does not claim equivalence to the missing original.
+Build authorization: NONE.
+B1-QUERY-DEFINITION-CONTRACT-RECONSTRUCTED-v1.0
+1. Contract identity
+Contract ID
+UNSILO-B1-QUERY-DEFINITION-CONTRACT-RECONSTRUCTED-v1.0
+Contract purpose
+Defines the closed typed query representation used by UnSilo v1 reconstructed acceptance semantics.
+A query is not free-form SQL, natural language, or an implementation-defined predicate. A query is a closed abstract syntax tree (AST) whose:
+• node forms are versioned,
+• operators have declared signatures,
+• parameters have declared types,
+• dependencies are pinned,
+• serialization is canonical,
+• compilation target is deterministic SQL generation,
+• unsupported semantics terminate as UR or REJECT rather than becoming implementation guesses.
+SQL is an execution target, not a semantic authority.
+2. Query identity model
+2.1 Query object
+A query object is:
+QueryDefinition {
+    contract_version,
+    query_kind,
+    ast,
+    dependency_pins,
+    scope_declaration,
+    knowledge_cut,
+    effective_cut,
+    compiler_identity,
+    serialization_version
+}
+Required fields:
+Field Type Required Meaning
+contract_version VersionString YES B1 contract version
+query_kind Enum YES Inventory / Composition / Lifecycle / Disclosure / Coverage
+ast ASTNode YES Closed query expression
+dependency_pins DependencySet YES Exact semantic dependencies
+scope_declaration ScopeObject YES Source and population boundaries
+knowledge_cut TimeBound CONDITIONAL Required when historical knowledge eligibility applies
+effective_cut TimeBound CONDITIONAL Required when effective-time eligibility applies
+compiler_identity CompilerIdentity YES Compiler name/version
+serialization_version VersionString YES Canonical byte format version
+3. Closed AST schema
+3.1 Root node
+Every valid AST has exactly one root:
+QueryRoot
+Schema:
+QueryRoot {
+    select: Projection,
+    from: PopulationExpression,
+    where: PredicateExpression | TRUE,
+    group_by: GroupExpression[],
+    order_by: OrderExpression[],
+    limit: Integer | ABSENT
+}
+No other root forms are permitted.
+4. AST node forms
+4.1 Population nodes
+SourcePopulation
+Represents an admitted source-backed population.
+Fields:
+SourcePopulation {
+    source_contract_id: Identifier,
+    source_contract_version: VersionString,
+    entity_type: EntityType,
+    scope_filter: PredicateExpression
+}
+Legal:
+• SEC registrant disclosures
+• company recruiting representations
+• H/D/R source-contract surfaces
+Illegal:
+• undeclared source
+• implicit crawling scope
+• unspecified acquisition boundary
+JoinPopulation
+Represents a B2-governed composition of populations.
+Fields:
+JoinPopulation {
+    left: PopulationExpression,
+    right: PopulationExpression,
+    join_operator: JoinOperator,
+    compatibility_pin: DependencyReference
+}
+Allowed join operators:
+EXACT_ID_JOIN
+DECLARED_RELATION_JOIN
+VERSIONED_MEMBERSHIP_JOIN
+TEMPORAL_COMPATIBLE_JOIN
+Rejected:
+FUZZY_IMPLICIT_JOIN
+NAME_ONLY_JOIN
+UNDECLARED_GRAPH_EXPANSION
+FilteredPopulation
+Fields:
+FilteredPopulation {
+    population: PopulationExpression,
+    predicate: PredicateExpression
+}
+Filtering occurs before:
+• counting,
+• aggregation,
+• denominator construction.
+A query MUST NOT remove unknown members after counting to create a clean percentage.
+5. Element types
+The closed element universe:
+Posting
+PostingRepresentation
+Company
+SourceRecord
+DisclosureStatement
+PropertyAssertion
+ClassificationAssertion
+MembershipDecision
+TemporalAssertion
+Observation
+No runtime-created element types are legal.
+Unknown element categories produce:
+REJECT(UNDECLARED_ELEMENT_TYPE)
+6. Predicate expression schema
+6.1 Predicate node
+Predicate {
+    operator,
+    operands[],
+    parameters{}
+}
+Every predicate requires:
+• declared operator,
+• declared operand types,
+• declared parameter schema.
+Missing any component:
+REJECT(UNBOUND_OPERATOR)
+6.2 Predicate operators
+Closed operator families:
+Equality
+EQ(element.field, typed_value)
+Parameter:
+typed_value:
+    Text
+    Integer
+    Decimal
+    Date
+    Timestamp
+    Enum
+Membership
+IN(element.field, ControlledVocabulary)
+Requires:
+• vocabulary ID,
+• vocabulary version.
+Temporal eligibility
+ELIGIBLE_AT(
+    assertion,
+    effective_cut,
+    knowledge_cut
+)
+Consumes B4 semantics.
+Allowed temporal states:
+KNOWN
+UNBOUNDED
+UNKNOWN
+No UNKNOWN coercion.
+Evidence availability
+HAS_EVIDENCE(
+    evidence_class
+)
+Evidence classes are dependency-pinned.
+Classification predicate
+CLASSIFIED_AS(
+    element,
+    classification_contract,
+    label
+)
+Requires:
+• admitted classifier contract,
+• classifier version,
+• evidence reference.
+Unadmitted labels:
+UR(CLASSIFICATION_NOT_ADMITTED)
+7. Parameter type system
+Allowed primitive parameters:
+Type Encoding
+String UTF-8 normalized string
+Integer Signed canonical decimal
+Decimal Exact decimal representation
+Boolean true/false
+Date YYYY-MM-DD
+Timestamp UTC ISO-8601 Z form
+Enum Versioned symbol
+Identifier Contract-scoped identifier
+Version Semantic version
+Forbidden:
+• floating-point parameters,
+• locale-dependent dates,
+• implementation-specific objects,
+• arbitrary JSON blobs without schema.
+8. Dependency pin model
+Every query pins dependencies that can affect meaning.
+Required dependency categories:
+DependencySet {
+    schema_version,
+    source_contract_versions[],
+    ontology_version,
+    registry_version,
+    temporal_contract_version,
+    classification_contract_versions[],
+    compiler_version
+}
+A missing dependency pin creates:
+REJECT(MISSING_SEMANTIC_DEPENDENCY)
+A changed dependency makes prior results stale.
+9. Rejection rules
+The compiler MUST reject:
+Syntax rejection
+MALFORMED_AST
+Examples:
+• missing required field,
+• wrong node shape,
+• unknown node type.
+Type rejection
+TYPE_ERROR
+Examples:
+• comparing date to integer,
+• applying composition operator to disclosure element.
+Semantic rejection
+ILLEGAL_COMPOSITION
+Examples:
+• combining incompatible populations,
+• bypassing B2 compatibility rules.
+Evidence rejection
+INSUFFICIENT_EVIDENCE
+Examples:
+• emitting VALUE without required evidence class,
+• missing SourceCheck prerequisite.
+Dependency rejection
+MISSING_DEPENDENCY
+Examples:
+• missing ontology version,
+• missing registry version.
+Unsupported reconstruction
+UNSUPPORTED_RECONSTRUCTED_SEMANTIC
+Used where the reconstructed contract cannot establish the intended original meaning.
+10. Canonical serialization specification
+10.1 Serialization format
+Canonical representation:
+UTF-8 JSON Canonical Form
+with additional UnSilo ordering rules.
+Serialized bytes are:
+UTF8(
+    canonical_json(
+        QueryDefinition
+    )
+)
+11. Canonical ordering
+Objects:
+• keys sorted lexicographically by UTF-8 byte order.
+Arrays:
+• semantic arrays preserve declared order.
+• unordered collections are sorted by canonical child serialization bytes.
+Dependency pins:
+[
+ dep_A,
+ dep_B,
+ dep_C
+]
+must be byte-sorted.
+12. Literal normalization
+Strings
+Before serialization:
+• Unicode NFC normalization.
+• No trimming unless field contract explicitly requires trimming.
+• Case normalization only where schema declares case-insensitive semantics.
+Numbers
+Integer:
+0012
+becomes:
+12
+Decimal:
+1.0
+becomes:
+1
+No scientific notation.
+Boolean
+Only:
+true
+false
+Dates
+Only:
+YYYY-MM-DD
+Timestamps
+Only:
+YYYY-MM-DDTHH:MM:SSZ
+13. Absent versus explicit values
+ABSENT and NULL are different.
+ABSENT
+Field not present because:
+• not applicable,
+• not requested,
+• not part of schema branch.
+NULL
+Explicit unknown value.
+Serialized:
+"field": null
+ABSENT:
+field omitted
+They MUST NOT hash identically.
+14. Query hash specification
+Hash algorithm
+SHA-256
+Hashed content
+Exactly:
+canonical_serialized_query_definition_bytes
+excluding:
+• execution timestamp,
+• runtime receipt,
+• generated SQL text,
+• execution environment.
+Including:
+• AST,
+• dependencies,
+• compiler identity,
+• serialization version,
+• scope,
+• cuts.
+Hash field:
+query_definition_hash
+15. Compiler identity and query identity
+Compiler identity:
+UNSILO-B1-COMPILER-v1.0
+Compiler identity is part of query semantics.
+Relationship:
+QueryDefinitionHash =
+SHA256(
+    serialized QueryDefinition
+)
+Compiler version is included in the serialized dependency set.
+Therefore:
+same AST + different compiler version ≠ identical query identity.
+Compilation changes require a new compiler identity.
+16. AST-to-SQL golden specifications
+SQL is generated from AST.
+SQL is never authored directly.
+Golden 1 — Posting inventory
+AST:
+COUNT(
+ FILTER(
+   PostingRepresentation,
+   SourceContract = "H"
+ )
+)
+Expected meaning:
+Count admitted posting representations from H boundary only.
+Expected SQL shape:
+SELECT COUNT(posting_id)
+FROM admitted_postings
+WHERE source_contract='H';
+Result shape:
+{
+ outcome: VALUE,
+ count: Integer
+}
+Golden 2 — Knowledge-cut eligibility
+AST:
+ELIGIBLE_AT(
+ PostingRepresentation,
+ knowledge_cut="2026-01-01"
+)
+Expected meaning:
+Return representations known by the specified knowledge cut.
+Result:
+VALUE
+UNKNOWN
+REJECT
+depending on temporal evidence completeness.
+Golden 3 — Composition count
+AST:
+COUNT(
+ FILTER(
+   Posting,
+   CLASSIFIED_AS(
+      Posting,
+      ClassificationContract-v1,
+      label
+   )
+ )
+)
+Expected:
+Classifier admission required.
+Missing classification:
+UR(CLASSIFICATION_NOT_AVAILABLE)
+17. Acceptance corpus crosswalk policy
+The reconstructed corpus:
+RECON-ACCEPTANCE-CORPUS-v2.0
+is the required acceptance surface.
+Each item MUST map to exactly one:
+1. canonical typed expression,
+2. permitted UR with reason,
+3. rejection with reason.
+No item may disappear.
+No item may be satisfied by undefined syntax.
+18. Corpus admission rules
+Fields unavailable or unacquired
+FIELD_STATE.UNAVAILABLE
+FIELD_STATE.NOT_ACQUIRED
+FIELD_STATE.MALFORMED
+FIELD_STATE.CONFLICTED
+These states propagate.
+They do not become:
+false
+zero
+empty
+not present
+Filtering before counting
+Required execution order:
+source admission
+→ schema validation
+→ evidence eligibility
+→ dependency compatibility
+→ filtering
+→ grouping
+→ counting
+→ result emission
+Illegal:
+count first
+remove unknowns later
+emit percentage
+Knowledge-cut eligibility
+A fact may answer a historical query only when:
+effective eligibility
+AND
+knowledge availability
+are satisfied under the accepted temporal contract.
+Unknown temporal boundaries produce:
+UNKNOWN
+not inferred inclusion/exclusion.
+19. B1 completion status
+Required B1 artifacts defined:
+• versioned closed AST schema: PRESENT
+• canonical serialization specification: PRESENT
+• hash algorithm and hashed boundary: PRESENT
+• compiler/query identity relationship: PRESENT
+• AST-to-SQL golden specification format: PRESENT
+• reconstructed corpus crosswalk framework: PRESENT
+• unavailable-field/filtering/knowledge-cut admission rules: PRESENT
+Remaining admission dependency:
+• Full 40-item corpus crosswalk execution is deferred to Part 3.
+• Original Wave-7 corpus remains unrecovered.
+• This artifact is a reconstructed candidate and not a freeze claim.
+Disposition: REPAIRED-PENDING-ADMISSION.
+Part 2 — B9-OPERATOR-CONTRACT (RECONSTRUCTED)
+Disposition: REPAIRED-PENDING-ADMISSION.
+Authority track: RECONSTRUCTED only.
+Original authority status: U-1R-AUTH-001 remains carried.
+Dependency caution: RECON-ECLASS-PD-AO-DD-v2.0 is not admitted authority. Any classification-dependent behavior below requires either Foundation-v2 explicit clauses or fresh admission of the classifier dependency.
+Build authorization: NONE.
+B9-OPERATOR-CONTRACT-RECONSTRUCTED-v1.0
+1. Contract identity
+Contract ID
+UNSILO-B9-OPERATOR-CONTRACT-RECONSTRUCTED-v1.0
+Purpose
+Defines the complete operator legality layer for UnSilo v1 reconstructed semantic queries.
+An operator is a typed semantic transformation.
+An operator is not:
+• a SQL fragment,
+• an implementation convenience,
+• an inference shortcut,
+• a model-generated interpretation.
+Every operator has:
+1. fixed input element types,
+2. fixed output element/result types,
+3. parameter schema,
+4. dependency requirements,
+5. legality conditions,
+6. deterministic result schema,
+7. explicit non-VALUE states.
+No runtime or compiler component may infer missing legality.
+2. Result-state vocabulary
+All operators emit one of the pinned result states.
+2.1 VALUE
+Meaning: The requested semantic operation completed and all required dependencies were satisfied.
+Schema:
+VALUE {
+    result_payload,
+    evidence_refs,
+    dependency_hashes,
+    computation_receipt
+}
+A VALUE requires:
+• admitted evidence,
+• valid dependencies,
+• legal composition,
+• satisfied B5/B6 prerequisites where applicable,
+• B10 closure obligations before final factual emission.
+2.2 ABSTENTION
+Meaning: The operator is defined, but the evidence ceiling prevents producing the requested semantic claim.
+Schema:
+ABSTENTION {
+    reason_code,
+    missing_capability,
+    evidence_ceiling,
+    available_observation
+}
+Examples:
+• classifier cannot determine category,
+• temporal relation cannot be established,
+• source does not expose required field.
+2.3 UNKNOWN / INCOMPARABLE
+Meaning: The comparison or relation cannot be determined under current compatible evidence.
+Schema:
+UNKNOWN {
+    reason_code,
+    unresolved_dependencies,
+    compared_scopes
+}
+Examples:
+• incompatible populations,
+• unresolved membership,
+• unknown temporal bound.
+2.4 ERROR / REJECTION
+Meaning: The requested operation is illegal.
+Schema:
+REJECT {
+    reason_code,
+    violated_contract,
+    offending_node
+}
+Examples:
+• undefined operator,
+• illegal composition,
+• missing required dependency.
+3. Operator family registry
+Closed operator families:
+1. Inventory operators
+2. Filtering operators
+3. Aggregation operators
+4. Composition operators
+5. Classification operators
+6. Temporal operators
+7. Disclosure operators
+8. Coverage operators
+9. Comparison operators
+10. Evidence operators
+No additional family may be introduced without a new contract version.
+4. Inventory operators
+4.1 OBSERVE_SET
+Signature
+OBSERVE_SET(
+    SourcePopulation
+)
+→ Set<Element>
+Parameters
+source_contract_id
+source_contract_version
+scope
+Legality
+Requires:
+• SourceCheck passed,
+• source contract admitted,
+• acquisition receipt exists.
+Forbidden:
+• uncontracted source,
+• implicit source expansion.
+Output
+VALUE {
+    admitted_elements[],
+    provenance[]
+}
+Failure:
+REJECT(SOURCE_NOT_ADMITTED)
+4.2 GET_FIELD
+Signature
+GET_FIELD(
+    Element,
+    FieldIdentifier
+)
+→ FieldValue
+Output states
+VALUE:
+field_value
+ABSTENTION:
+FIELD_UNAVAILABLE
+UNKNOWN:
+FIELD_CONFLICTED
+Reject:
+FIELD_NOT_DECLARED
+5. Filtering operators
+5.1 FILTER
+Signature:
+FILTER(
+    Set<Element>,
+    Predicate
+)
+→ Set<Element>
+Parameters:
+predicate_version
+Legality:
+• predicate must have valid type signature,
+• filtering occurs before counting,
+• unknown predicate results propagate.
+Illegal:
+FILTER_AFTER_AGGREGATION
+5.2 FILTER_WITH_UNKNOWN
+Explicit three-way filtering.
+Signature:
+FILTER_WITH_UNKNOWN(
+    Set<Element>,
+    Predicate
+)
+→ {
+    matched,
+    unmatched,
+    unknown
+}
+Purpose: Prevents silent removal of unknown records.
+6. Aggregation operators
+6.1 COUNT
+Signature:
+COUNT(
+    Set<Element>
+)
+→ Integer
+Legality:
+Requires:
+• input population frozen,
+• filters already applied.
+Forbidden:
+COUNT(raw_join_output)
+where joins can multiply rows.
+6.2 DISTINCT_COUNT
+Signature:
+DISTINCT_COUNT(
+    Set<Element>,
+    identity_key
+)
+→ Integer
+Requires:
+• stable identity contract,
+• pinned registry version where entities are involved.
+6.3 GROUP_BY
+Signature:
+GROUP_BY(
+    Set<Element>,
+    GroupExpression
+)
+→ GroupedSet
+Requires:
+• grouping element type declared,
+• vocabulary version pinned.
+7. Composition operators
+Composition operators consume B2/B3 legality rules.
+7.1 COMPOSE_POPULATIONS
+Signature:
+COMPOSE_POPULATIONS(
+    PopulationA,
+    PopulationB,
+    CompositionRule
+)
+→ Population
+Required:
+B2 composition compatibility
+B3 change/decomposition semantics
+Allowed:
+• compatible source scopes,
+• compatible ontology versions,
+• compatible membership versions.
+Reject:
+ILLEGAL_COMPOSITION
+7.2 COMPARISON
+Signature:
+COMPARE(
+    PopulationA,
+    PopulationB,
+    ComparisonRule
+)
+→ ComparisonResult
+Result:
+VALUE
+UNKNOWN_INCOMPARABLE
+REJECT
+A comparison cannot silently normalize incompatible populations.
+8. Classification operators
+8.1 CLASSIFY
+Signature
+CLASSIFY(
+    Element,
+    ClassificationContract,
+    Version
+)
+→ ClassificationAssertion
+Dependency: Classification contract must be admitted.
+Current state: RECON-ECLASS-PD-AO-DD-v2.0 is pending admission.
+Therefore:
+CLASSIFY(...)
+
+→ ABSTENTION(CLASSIFIER_NOT_ADMITTED)
+unless another admitted contract exists.
+8.2 CLASSIFICATION_FILTER
+Signature:
+CLASSIFICATION_FILTER(
+    Set<Element>,
+    Label,
+    ClassificationContract
+)
+Possible outputs:
+VALUE: classification exists.
+ABSTENTION: classifier unavailable.
+UNKNOWN: conflicting labels.
+Reject: classifier contract missing.
+9. Temporal operators
+Consumes B4 accepted temporal semantics.
+9.1 EFFECTIVE_ELIGIBLE
+Signature:
+EFFECTIVE_ELIGIBLE(
+    Assertion,
+    EffectiveCut
+)
+→ BooleanState
+States:
+KNOWN
+UNKNOWN
+UNBOUNDED
+No conversion:
+UNBOUNDED ≠ TRUE
+9.2 KNOWLEDGE_ELIGIBLE
+Signature:
+KNOWLEDGE_ELIGIBLE(
+    Assertion,
+    KnowledgeCut
+)
+Checks whether assertion was available at the specified knowledge boundary.
+9.3 TEMPORAL_RELATE
+Signature:
+TEMPORAL_RELATE(
+    AssertionA,
+    AssertionB,
+    Relation
+)
+Relations:
+BEFORE
+AFTER
+OVERLAPS
+CONTAINS
+Unknown bounds produce:
+UNKNOWN_TEMPORAL_RELATION
+10. Disclosure operators
+10.1 ADMIT_DISCLOSURE
+Signature:
+ADMIT_DISCLOSURE(
+    SourceRecord
+)
+→ DisclosureStatement
+Requires:
+• publisher/registrant source,
+• exact provenance,
+• document version.
+10.2 DISCLOSURE_PROPOSITION
+Signature:
+EXTRACT_PROPOSITION(
+    DisclosureStatement
+)
+→ Proposition
+Output: VALUE only represents: "publisher stated X"
+Never: "world is X"
+11. Coverage operators
+11.1 SOURCE_COVERAGE_CHECK
+Signature:
+SOURCE_COVERAGE_CHECK(
+    SourceContract,
+    QueryScope
+)
+→ CoverageResult
+Requires:
+• SourceCheck,
+• EnumerationProof where completeness/non-observation is claimed.
+11.2 NON_OBSERVATION
+Signature:
+QUALIFIED_NON_OBSERVATION(
+    Scope,
+    ExpectedPopulation
+)
+Requires:
+B5:
+• SourceCheck,
+• EnumerationProof.
+B6:
+• write/admission prerequisites.
+Without these:
+REJECT(QN_PREREQUISITE_FAILED)
+12. Evidence-class propagation
+Every operator declares evidence behavior.
+Evidence classes
+SOURCE_RECORD
+PUBLISHER_STATEMENT
+REGISTRANT_STATEMENT
+CLASSIFICATION_ASSERTION
+DERIVED_METRIC
+COUNTEREVIDENCE
+Propagation rules:
+Input Output
+Source record may support derived assertion
+Publisher statement remains attributed
+Classification assertion cannot exceed classifier ceiling
+Derived metric requires MetricProof/B10 closure
+Counterevidence preserved, never discarded
+13. Unavailable field behavior
+Unavailable:
+FIELD_UNAVAILABLE
+must propagate unless the operator explicitly defines handling.
+Forbidden:
+missing field → false
+missing field → zero
+missing field → empty
+14. Classifier abstention behavior
+Classifier states:
+CLASSIFIED
+ABSTAINED
+CONFLICTED
+UNAVAILABLE
+Rules:
+• ABSTAINED cannot enter VALUE population.
+• CONFLICTED cannot be silently projected.
+• UNAVAILABLE cannot become negative evidence.
+15. Membership behavior
+Consumes B8 registry semantics.
+Every membership-sensitive operator requires:
+registry_version
+membership_snapshot
+Raw membership history cannot be joined directly.
+Allowed:
+registry_snapshot(version)
+Forbidden:
+join(all_membership_decisions)
+16. Missing dependency behavior
+Any missing dependency:
+MISSING_DEPENDENCY
+No operator may:
+• infer defaults,
+• choose latest version,
+• use current registry implicitly,
+• use current ontology implicitly.
+17. Complete typing matrix
+Valid expressions
+Expression Result
+COUNT(Filter(Posting, Predicate)) VALUE
+TEMPORAL_ELIGIBLE(Assertion, Cut) VALUE/UNKNOWN
+COMPARE(CompatiblePopulationA,B) VALUE
+SOURCE_COVERAGE_CHECK(AdmittedSource) VALUE
+DISCLOSURE_PROPOSITION(RegistrantStatement) VALUE
+Invalid expressions
+Expression Result
+COUNT(Classification without admitted contract) REJECT
+Compare incompatible registries UNKNOWN_INCOMPARABLE
+SUM(untyped amount field) REJECT
+Non-observation without EnumerationProof REJECT
+Temporal relation with missing required bounds UNKNOWN
+Underdetermined expressions
+Expression Result
+CLASSIFY using pending RECON-ECLASS contract ABSTENTION
+Combine populations with unresolved B2 compatibility UNKNOWN
+Claim absence from incomplete source REJECT
+18. Corpus alignment requirement
+All RECON-ACCEPTANCE-CORPUS-v2.0 questions must resolve through this operator vocabulary.
+Mapping rules:
+• R-I questions → inventory/filter/evidence operators.
+• R-C questions → composition/classification/comparison operators.
+• R-L questions → temporal operators.
+• R-D questions → disclosure operators.
+• R-O questions → coverage/evidence operators.
+The full item-by-item mapping is deferred to Part 3.
+19. B2/B3 integration
+Operator legality depends on:
+B2
+Composition legality:
+• compatible populations,
+• compatible dependencies,
+• explicit join semantics.
+B3
+Change/decomposition:
+• changed dependencies invalidate prior results,
+• decompositions preserve history,
+• comparisons require compatible versions.
+No operator may bypass B2/B3 by compiling directly into SQL.
+20. B10 boundary
+No operator emits final factual VALUE when B10 closure obligations are unmet.
+Required closure:
+• evidence refs,
+• dependency hashes,
+• computation receipt,
+• counterevidence obligations,
+• reproducibility package.
+Before B10:
+semantic VALUE candidate
+After B10:
+admissible result
+21. B9 completion status
+Required artifacts:
+Criterion Status
+Operator families defined PRESENT
+Input/output types PRESENT
+Parameter types PRESENT
+Legality rules PRESENT
+Dependency/version requirements PRESENT
+Deterministic result schema PRESENT
+VALUE/abstention/unknown/error vocabulary PRESENT
+Evidence propagation PRESENT
+Unavailable fields PRESENT
+Classifier abstention PRESENT
+Membership handling PRESENT
+Missing dependency handling PRESENT
+Typing matrix PRESENT
+Corpus alignment FRAMEWORK PRESENT; full crosswalk Part 3
+Remaining admission dependencies:
+• Full 40-item corpus operator mapping.
+• Independent fresh admission.
+• Original Wave-7 authority remains unavailable.
+• RECON-ECLASS-PD-AO-DD-v2.0 remains unadmitted.
+Disposition: REPAIRED-PENDING-ADMISSION.
+Part 3 — RECON-ACCEPTANCE-CORPUS-v2.0 CROSSWALK, B1/B9 RECONCILIATION, RECONSTRUCTION LIMITATIONS
+Disposition: REPAIRED-PENDING-ADMISSION.
+Authority track: RECONSTRUCTED only.
+Original authority status: U-1R-AUTH-001 remains carried.
+Purpose: Demonstrate that every reconstructed acceptance question has a defined typed semantic path or an explicit UR/rejection state.
+Build authorization: NONE.
+1. Corpus crosswalk
+Crosswalk notation
+Typed expression references:
+• INV — inventory operators
+• FLT — filtering operators
+• AGG — aggregation operators
+• CMP — composition/comparison operators
+• CLS — classification operators
+• TMP — temporal operators
+• DISC — disclosure operators
+• COV — coverage/evidence operators
+Result classes:
+• VALUE — permitted only after dependency and closure obligations.
+• UR(reason) — unresolved because required semantics/evidence are unavailable.
+• REJECT(reason) — illegal request or unsupported semantic operation.
+• ABSTENTION(reason) — defined operator exists, but evidence ceiling prevents assertion.
+2. R-I* Inventory crosswalk
+R-I1
+Question: admitted observed postings for company, cuts, scope without equating postings to openings/hires.
+Typed expression:
+AGG.COUNT(
+  FLT(
+    INV.OBSERVE_SET(SourcePopulation),
+    PostingRepresentation.admitted=true
+  )
+)
+Result: VALUE
+Restrictions:
+• output is posting representation count only.
+• no hiring/opening inference.
+R-I2
+Question: eligible source representations under H/D/R boundary.
+Typed expression:
+INV.OBSERVE_SET(
+ SourcePopulation(source_contract_version)
+)
+Result:
+• VALUE for admitted sources.
+• REJECT(SOURCE_NOT_ADMITTED) otherwise.
+R-I3
+Question: identity, revisions, mirrors, duplicates, evergreen postings.
+Typed expression:
+INV.GET_FIELD(
+ PostingRepresentation,
+ identity_fields
+)
++
+B8 membership/version semantics
+Result: VALUE
+If identity rule missing: UR(IDENTITY_RULE_UNAVAILABLE)
+R-I4
+Question: publisher-declared fields with provenance.
+Typed expression:
+INV.GET_FIELD(
+ PostingRepresentation,
+ FieldIdentifier
+)
+Result: VALUE or: ABSTENTION(FIELD_UNAVAILABLE)
+R-I5
+Question: unavailable, malformed, conflicting fields.
+Typed expression: INV.GET_FIELD() with field-state propagation.
+Result: VALUE(FIELD_STATE=...)
+Never: false/zero/empty substitution.
+R-I6
+Question: effective-time and knowledge-time eligibility.
+Typed expression:
+TMP.EFFECTIVE_ELIGIBLE()
+AND
+TMP.KNOWLEDGE_ELIGIBLE()
+Result: VALUE or: UNKNOWN(TEMPORAL_BOUND_UNRESOLVED)
+R-I7
+Question: what is counted and filtering before counting.
+Typed expression:
+AGG.COUNT(
+ FLT(population,predicate)
+)
+Result: VALUE
+Illegal: COUNT(raw_join_output)
+R-I8
+Question: deterministic inventory result schema.
+Typed expression:
+AGG.COUNT()
+→ ResultState
+Result schema:
+VALUE
+UNKNOWN
+REJECT
+3. R-C* Composition crosswalk
+R-C1
+Question: publisher declarations vs classification-required attributes.
+Typed expression: DISC.ADMIT_DISCLOSURE() or: CLS.CLASSIFY()
+Result:
+• declaration: VALUE
+• classification without admitted contract: ABSTENTION
+R-C2
+Question: composition element and parameter types.
+Typed expression:
+CMP.COMPOSE_POPULATIONS(
+ element_type,
+ parameter_schema
+)
+Result: VALUE if types match.
+R-C3
+Question: classifier abstention/conflicting labels.
+Typed expression: CLS.CLASSIFY()
+States:
+CLASSIFIED
+ABSTAINED
+CONFLICTED
+UNAVAILABLE
+R-C4
+Question: composition filters before denominators.
+Typed expression:
+AGG.COUNT(
+ FLT_WITH_UNKNOWN()
+)
+Result: VALUE
+Unknown members retained separately.
+R-C5
+Question: source/schema/projection dependencies.
+Typed expression:
+CMP.COMPOSE_POPULATIONS(
+ dependency_pins
+)
+Missing pin: REJECT(MISSING_DEPENDENCY)
+R-C6
+Question: combine or compare populations.
+Typed expression:
+CMP.COMPARE(
+ PopulationA,
+ PopulationB
+)
+Result:
+• VALUE if B2 compatible.
+• UNKNOWN_INCOMPARABLE otherwise.
+R-C7
+Question: requested semantics exceed evidence ceiling.
+Typed expression: CLS.CLASSIFY()
+or: CMP.COMPARE()
+Result: ABSTENTION(EVIDENCE_CEILING_EXCEEDED)
+4. R-L* Lifecycle crosswalk
+R-L1
+Question: first observation.
+Typed expression:
+TMP.KNOWLEDGE_ELIGIBLE(
+ Observation,
+ cut
+)
+Result: VALUE
+R-L2
+Question: disappearance/non-observation meaning.
+Typed expression: COV.QUALIFIED_NON_OBSERVATION()
+Result: Requires B5/B6.
+Without prerequisites: REJECT(QN_PREREQUISITE_FAILED)
+R-L3
+Question: reappearance.
+Typed expression:
+INV.GET_FIELD(identity)
++
+TMP.TEMPORAL_RELATE()
+Result: VALUE only if identity continuity established.
+Otherwise: UNKNOWN(IDENTITY_UNRESOLVED)
+R-L4
+Question: revision vs identity change.
+Typed expression: RecordVersion comparison
+Result: VALUE
+R-L5
+Question: publication, archive, observation, effective, knowledge times.
+Typed expression:
+TMP.KNOWLEDGE_ELIGIBLE()
+TMP.EFFECTIVE_ELIGIBLE()
+Result: VALUE
+R-L6
+Question: KNOWN/UNBOUNDED/UNKNOWN bounds.
+Typed expression: TMP.TEMPORAL_RELATE()
+Result: Explicit temporal state.
+R-L7
+Question: historical knowledge cut eligibility.
+Typed expression: TMP.KNOWLEDGE_ELIGIBLE()
+Result: VALUE/UNKNOWN.
+R-L8
+Question: unresolved lifecycle dependencies.
+Typed expression: TMP.TEMPORAL_RELATE()
+Result: UNKNOWN
+5. R-D* Disclosure crosswalk
+R-D1
+Question: admitted publisher/registrant statements.
+Typed expression: DISC.ADMIT_DISCLOSURE()
+Result: VALUE.
+R-D2
+Question: source identity/document span preservation.
+Typed expression:
+DISC.ADMIT_DISCLOSURE()
+→ provenance payload
+Result: VALUE.
+R-D3
+Question: preserve wording without strengthening inference.
+Typed expression: DISC.EXTRACT_PROPOSITION()
+Result: Publisher proposition only.
+R-D4
+Question: disclosure times.
+Typed expression:
+TMP.KNOWLEDGE_ELIGIBLE()
+TMP.EFFECTIVE_ELIGIBLE()
+Result: VALUE/UNKNOWN.
+R-D5
+Question: conflicting/superseding disclosures.
+Typed expression: GET_FIELD(PropertyAssertion) with conflict preservation.
+Result: VALUE(CONFLICT_SET)
+R-D6
+Question: missing expected disclosure.
+Typed expression: COV.QUALIFIED_NON_OBSERVATION()
+Result: Requires B5/B6.
+Otherwise: REJECT.
+R-D7
+Question: disclosure result schema.
+Typed expression: DISC.ADMIT_DISCLOSURE()
+States: VALUE, UR, REJECT.
+6. R-O* Operational crosswalk
+R-O1
+Question: declared source scopes.
+Typed expression: COV.SOURCE_COVERAGE_CHECK()
+Result: VALUE.
+R-O2
+Question: SourceCheck.
+Typed expression: COV.SOURCE_COVERAGE_CHECK()
+Result: Required before interpretation.
+R-O3
+Question: EnumerationProof.
+Typed expression: COV.QUALIFIED_NON_OBSERVATION()
+Dependency: EnumerationProof required.
+R-O4
+Question: discovery, pagination, termination receipts.
+Typed expression: COV.SOURCE_COVERAGE_CHECK()
+Result: VALUE only with acquisition receipt.
+R-O5
+Question: parser/schema validation.
+Typed expression: INV.OBSERVE_SET()
+Requires: schema validation success.
+R-O6
+Question: Wayback/CDX limitations.
+Typed expression:
+COV.SOURCE_COVERAGE_CHECK(
+ WaybackSourceContract
+)
+Result: VALUE with limitations.
+R-O7
+Question: equivalent comparison scopes.
+Typed expression: CMP.COMPARE()
+Result: VALUE or: UNKNOWN_INCOMPARABLE.
+R-O8
+Question: B5+B6 before qualified non-observation.
+Typed expression: COV.QUALIFIED_NON_OBSERVATION()
+Missing prerequisites: REJECT.
+R-O9
+Question: expose coverage limitations.
+Typed expression: COV.SOURCE_COVERAGE_CHECK()
+Result: VALUE with limitation payload.
+R-O10
+Question: stop at UR/QN/rejection.
+Typed expression: All operators.
+Invariant: No VALUE without satisfied evidence and dependency gates.
+7. B1 freeze-criterion reconciliation
+B1 criterion Status Evidence
+Named B1 query-definition contract PASS UNSILO-B1-QUERY-DEFINITION-CONTRACT-RECONSTRUCTED-v1.0, Part 1 §1
+Versioned closed AST schema PASS Part 1 §§3-6
+Node forms PASS Part 1 §4
+Operator types PASS Part 1 §6
+Element types PASS Part 1 §5
+Parameter types PASS Part 1 §7
+Required fields PASS Part 1 §2
+Dependency pins PASS Part 1 §8
+Rejection rules PASS Part 1 §9
+Canonical serialization PASS Part 1 §§10-13
+Hash algorithm PASS Part 1 §14
+Hashed boundary PASS Part 1 §14
+Compiler identity/version PASS Part 1 §15
+Query identity relationship PASS Part 1 §15
+AST-to-SQL golden specs PASS Part 1 §16
+Corpus crosswalk PASS Part 3 §§1-6
+Missing corpus entries PASS No reconstructed entries omitted
+Undefined syntax avoidance PASS Part 1 §17
+UR not concealing undefined operators PASS Crosswalk assigns explicit reasons
+8. B9 freeze-criterion reconciliation
+B9 criterion Status Evidence
+Named B9 operator contract PASS UNSILO-B9-OPERATOR-CONTRACT-RECONSTRUCTED-v1.0, Part 2 §1
+Operator families PASS Part 2 §3
+Input/output element types PASS Part 2 §§4-11
+Parameter types PASS Part 2 §5 and Part 1 §7
+Legality rules PASS Part 2 §§4-16
+Dependency requirements PASS Part 2 §§15-16
+Deterministic result schema PASS Part 2 §2
+VALUE distinction PASS Part 2 §2.1
+Abstention distinction PASS Part 2 §2.2
+Unknown/incomparable distinction PASS Part 2 §2.3
+Error/rejection distinction PASS Part 2 §2.4
+Evidence propagation PASS Part 2 §12
+Unavailable fields PASS Part 2 §13
+Classifier abstention PASS Part 2 §14
+Unresolved membership PASS Part 2 §15
+Missing dependencies PASS Part 2 §16
+Typing matrix PASS Part 2 §17
+Corpus alignment PASS Part 3 §§1-6
+B2/B3 integration PASS Part 2 §19
+No runtime legality guessing PASS Part 2 §1 and §19
+No VALUE without B10 closure PASS Part 2 §20
+9. Reconstruction limitations
+9.1 Original corpus limitation
+The original Wave-7 forty question texts are not recovered.
+Status: U-1R-AUTH-001 = CARRIED
+This crosswalk proves:
+• reconstructed corpus coverage,
+• reconstructed operator coverage,
+• explicit disposition behavior.
+It does not prove:
+• identity with original wording,
+• identity with original intended semantics.
+9.2 Missing authority limitation
+No original authority artifact was available to compare:
+• question ordering,
+• hidden assumptions,
+• intended edge cases,
+• rejected semantics.
+Therefore: ORIGINAL-AUTHORITY COMPLETE = UNREACHABLE
+9.3 Classification dependency limitation
+Classification-dependent expressions remain conditional.
+RECON-ECLASS-PD-AO-DD-v2.0 was not admitted.
+Therefore:
+CLASSIFY()
+=
+ABSTENTION unless another admitted classifier contract exists.
+9.4 Admission limitation
+This contribution establishes candidate completeness.
+It does not establish freeze.
+Required next step: fresh independent admission session verifying:
+• artifact integrity,
+• criterion satisfaction,
+• dependency alignment,
+• reconstructed-authority sufficiency.
+Disposition: REPAIRED-PENDING-ADMISSION.
+1. Identity and authority
+Session ID: UNSILO-B1-B9-REPAIR-WORKER-2026-10-01-PART4
+Primary assignment: Author RECONSTRUCTED B1-query-definition-contract and RECONSTRUCTED B9-operator-contract satisfying the Foundation-v2 ACCEPTED repair criteria for B1/B9 under the RECONSTRUCTED-AUTHORITY track.
+Incoming last accepted baseline: Foundation-v2 ACCEPTED (canonical baseline; exact SHA-256 unavailable in current surfaced context)
+Incoming pending contribution: NONE
+Candidate outgoing contribution: UNSILO-B1-QUERY-DEFINITION-CONTRACT-RECONSTRUCTED-v1.0 + UNSILO-B9-OPERATOR-CONTRACT-RECONSTRUCTED-v1.0 + Part 3 corpus crosswalk and reconciliation artifact from this session
+Governing scope and protocol versions: Foundation-v2 ACCEPTED; RECONSTRUCTED-AUTHORITY repair protocol; RECON-ACCEPTANCE-CORPUS-v2.0; B1/B9 acceptance criteria from Foundation-v2
+Foundation-v2 canonical SHA-256: NOT AVAILABLE IN CURRENT SESSION CONTEXT
+Authority track used: RECONSTRUCTED
+ORIGINALS_RECOVERED status: NO
+Build authorization: NONE
+2. Admission of the previous contribution
+Incoming tail checked: NO — no prior repair-worker contribution tail was supplied for admission in this session.
+Incoming artifacts opened: Foundation-v2 ACCEPTED baseline referenced by operator; reconstructed B1/B9 repair assignment; RECON-ACCEPTANCE-CORPUS-v2.0 embedded in assignment. Exact Foundation-v2 artifact file unavailable in current surfaced context.
+Previous contribution rubric: R01-R16 each NOT APPLICABLE — no prior contribution artifact presented for admission.
+Admission decision: ACCEPT
+Last accepted state after this check: Foundation-v2 ACCEPTED baseline remains governing state; B1/B9 remain OPEN pending fresh admission.
+Rejected claims and dependent claims requiring reassessment: No prior contribution claims rejected in this session.
+3. Recovery-impact check
+Recovery check performed: YES
+Exact repositories/Library/project artifacts inspected: NONE beyond artifacts and baseline content supplied in the active repair assignment context.
+Newly recovered original authority: NONE -- U-1R-AUTH-001 remains unrecovered.
+Affected U-1R-AUTH records: U-1R-AUTH-001 unchanged; original Wave-7 question texts remain unavailable.
+Automatic reopenings triggered: NONE
+Foundation-v2 sections requiring re-admission: NONE triggered by recovery because no original authority was recovered.
+Dependent accepted work blocked pending impact review: None beyond existing B1/B9 fresh-admission requirement.
+Bounded-search qualification: Search scope was bounded to supplied reconstruction track materials. No claim of exhaustive original-authority recovery is made.
+4. State to carry forward
+Blocker table:
+• B1: REPAIRED-PENDING-ADMISSION; contract version UNSILO-B1-QUERY-DEFINITION-CONTRACT-RECONSTRUCTED-v1.0; satisfied criteria: closed AST schema, serialization specification, hash boundary, compiler/query identity relationship, AST-to-SQL specification format, reconstructed corpus crosswalk framework, unavailable-field/filtering/knowledge-cut rules; remaining criteria: fresh independent admission and original-authority equivalence unavailable.
+• B2: FROZEN; consumed only; no semantic changes proposed.
+• B3: FROZEN; consumed only; no semantic changes proposed.
+• B4: ACCEPTED-FREEZE; consumed temporal semantics only.
+• B5: RETAINED; SourceCheck and EnumerationProof prerequisites preserved.
+• B6: RETAINED; constructor/write-admission obligations preserved.
+• B7: ACCEPTED-FREEZE; ontology/version semantics consumed only.
+• B8: ACCEPTED-FREEZE; registry/membership semantics consumed only.
+• B9: REPAIRED-PENDING-ADMISSION; contract version UNSILO-B9-OPERATOR-CONTRACT-RECONSTRUCTED-v1.0; satisfied criteria: operator families, types, legality rules, dependency requirements, result states, evidence propagation, unavailable-field behavior, classifier abstention behavior, membership handling, typing matrix; remaining criteria: fresh independent admission and original-authority equivalence unavailable.
+• B10: OPEN; not closed by this contribution.
+• B11: RETAINED; no changes.
+• B12: RETAINED; counterevidence obligations preserved.
+7R status and supporting crosswalk: RECONSTRUCTED track crosswalk completed for RECON-ACCEPTANCE-CORPUS-v2.0. Original 7R authority corpus remains unavailable through U-1R-AUTH-001.
+Retained-contract conditions and integration status: B2/B3 composition and comparison semantics consumed without alteration; B4 temporal semantics consumed without alteration; B7 ontology/version semantics consumed without alteration; B8 registry semantics consumed without alteration; B5/B6 prerequisites preserved; B12 evidence obligations preserved.
+Accepted facts/derivations:
+• B1 reconstructed contract exists: UNSILO-B1-QUERY-DEFINITION-CONTRACT-RECONSTRUCTED-v1.0.
+• B9 reconstructed contract exists: UNSILO-B9-OPERATOR-CONTRACT-RECONSTRUCTED-v1.0.
+• RECON-ACCEPTANCE-CORPUS-v2.0 crosswalk completed across R-I1 through R-O10.
+• Reconstruction-only status preserved.
+WEAK or unverified claims:
+• Original Wave-7 question identity: UNVERIFIED.
+• Equivalence between reconstructed corpus and original corpus: UNVERIFIED.
+• RECON-ECLASS-PD-AO-DD-v2.0 as admitted classifier authority: UNVERIFIED; prohibited from use as admitted dependency.
+Superseded rules:
+• No prior accepted B1/B9 rule superseded.
+• Undefined runtime semantic selection -> replaced by explicit typed operator legality and rejection rules in reconstructed contracts.
+Reopened or invalidated claims and dependency impact:
+• NONE.
+Missing-original unknowns carried:
+• U-1R-AUTH-001: original Wave-7 question corpus unavailable; effect: prevents ORIGINAL-AUTHORITY completion and prevents treating reconstructed acceptance as recovered authority.
+5. Exact artifacts to bring
+• UNSILO-B1-QUERY-DEFINITION-CONTRACT-RECONSTRUCTED-v1.0; locator: Part 1 of this session; version: v1.0; required sections: §§1-19; purpose: reconstructed query-definition authority candidate; availability: PRESENT.
+• UNSILO-B9-OPERATOR-CONTRACT-RECONSTRUCTED-v1.0; locator: Part 2 of this session; version: v1.0; required sections: §§1-21; purpose: reconstructed operator legality authority candidate; availability: PRESENT.
+• RECON-ACCEPTANCE-CORPUS-v2.0; locator: repair assignment supplied corpus; version: v2.0 reconstructed substitute; required sections: R-I*, R-C*, R-L*, R-D*, R-O*; purpose: acceptance crosswalk basis; availability: PRESENT.
+• Foundation-v2 ACCEPTED baseline; locator: governing baseline referenced by operator; version: Foundation-v2 ACCEPTED; required sections: B1/B9 criteria and accepted dependencies; purpose: governing repair baseline; availability: PARTIAL IN CURRENT SESSION CONTEXT.
+Missing artifacts and the claims they prevent:
+• Original Wave-7 question corpus: prevents claim that reconstructed crosswalk equals original acceptance authority.
+• Foundation-v2 canonical digest: prevents exact digest assertion.
+Do not rely on these rejected or superseded artifacts:
+• Any unrecovered original Wave-7 corpus reconstruction presented as recovered authority.
+• RECON-ECLASS-PD-AO-DD-v2.0 as admitted classifier dependency before fresh admission.
+6. Open threads
+• U-1R-AUTH-001; exact unresolved question: whether original Wave-7 question texts can be recovered; category: authority recovery; current evidence: unavailable; blocker/completion impact: prevents ORIGINAL-AUTHORITY completion; closure condition: recovery and verification of original corpus; next action: dedicated recovery session if artifacts become available.
+• B1 admission; exact unresolved question: whether reconstructed query contract independently satisfies freeze criteria; category: semantic admission; current evidence: reconstructed contract and crosswalk; blocker/completion impact: B1 remains REPAIRED-PENDING-ADMISSION; closure condition: fresh independent admission.
+• B9 admission; exact unresolved question: whether reconstructed operator contract independently satisfies freeze criteria; category: semantic admission; current evidence: reconstructed operator contract and typing matrix; closure condition: fresh independent admission.
+• RECON-ECLASS dependency; exact unresolved question: whether classifier contract is admissible; category: dependency authority; current evidence: pending status; blocker/completion impact: classification VALUE paths restricted; closure condition: fresh admission.
+Unresolved contradictions:
+• NONE identified within reconstructed materials.
+Surviving adversarial cases:
+• Missing original corpus.
+• Pending classifier authority.
+• Dependency/version drift.
+• Evidence-ceiling overreach.
+• Runtime semantic guessing prohibition.
+Original obligations not yet reconciled:
+• Original Wave-7 authority equivalence.
+Reconstructed substitute obligations not yet satisfied:
+• Fresh independent admission of B1/B9 reconstructed contracts.
+7. Landscape change
+Changed since the previous accepted state: UNKNOWN
+External source or source-contract changes: NONE evaluated.
+Recovered authority or newly available evidence: NONE evaluated.
+Semantic changes: B1/B9 reconstructed candidate contracts added; no frozen authority modified.
+Scope/authority changes: ORIGINAL-AUTHORITY remains unreachable; RECONSTRUCTED track remains active.
+Blocker and dependency consequences: B1/B9 moved from OPEN repair state to REPAIRED-PENDING-ADMISSION; B10 remains OPEN.
+What was actually checked:
+• Reconstructed B1 contract.
+• Reconstructed B9 contract.
+• RECON-ACCEPTANCE-CORPUS-v2.0 crosswalk.
+• B1/B9 acceptance criteria from assignment.
+What was not checked:
+• Original Wave-7 corpus.
+• Foundation-v2 canonical digest.
+• Fresh independent admission by a separate reviewer.
+• Admission of pending classifier dependency.
+8. Rubric assessment of this outgoing contribution
+R01-R16:
+• R01 PASS -- contribution identity and authority track explicitly stated.
+• R02 PASS -- governing baseline identified.
+• R03 PASS -- reconstructed-only status preserved.
+• R04 PASS -- B1 artifact identified.
+• R05 PASS -- B9 artifact identified.
+• R06 PASS -- corpus crosswalk completed.
+• R07 PASS -- acceptance criteria reconciliation completed.
+• R08 PASS -- missing original authority disclosed.
+• R09 PASS -- dependency cautions preserved.
+• R10 PASS -- no frozen claims made for B1/B9.
+• R11 PASS -- B2/B3/B4/B7/B8 consumed without alteration.
+• R12 PASS -- B5/B6/B12 retained obligations preserved.
+• R13 PASS -- VALUE gating and evidence obligations preserved.
+• R14 PASS -- limitations explicitly recorded.
+• R15 PASS -- next-session admission instructions provided.
+• R16 PASS -- mandatory tail format completed.
+Global self-assessment: PASS
+Contribution status: PENDING FRESH-SESSION ADMISSION
+If failed: exact repairs required before admission: NONE identified for this worker contribution; fresh independent admission remains required.
+9. Copy-paste instruction for the next session
+You are the next sequential UnSilo v1 repair worker. First verify this tail and its exact artifacts against R01-R16. Admit no failed contribution. Verify the Foundation-v2 canonical self-pin before using its RECONSTRUCTED contracts. Run the automatic recovery-impact check before dependent semantic work. Use this accepted baseline: Foundation-v2 ACCEPTED. Your single primary assignment is: fresh independent admission of the B1/B9 reconstructed contracts. Resolve these obligations: B1 canonical query definition, B1 corpus crosswalk, B9 operator typing matrix, corpus alignment, B2/B3 integration, UNKNOWN handling, B12 evidence preservation. Open these artifacts first: reconstructed B1 contract, reconstructed B9 contract, Foundation-v2, RECON-ACCEPTANCE-CORPUS-v2.0. Produce or amend: admission verdict artifact. Challenge it with: untyped operators, ambiguous serialization, corpus gaps, evidence-ceiling overreach, unresolved dependencies. Check these dependencies: B4, B7, B8, B2, B3, B5/B6, B12. Do not reopen settled matters without a cited defect, recovered authority, or dependency impact. If the assignment cannot close, preserve the open criteria and specify the next dedicated session. End with this mandatory tail.
+10. Program disposition
+Artifact 1 ORIGINAL-AUTHORITY procedure evaluated in full: NO
+ORIGINAL-AUTHORITY COMPLETE: UNREACHABLE
+Artifact 1 RECONSTRUCTED-AUTHORITY procedure evaluated in full: YES
+Evaluator role: REPAIR WORKER
+RECONSTRUCTED-AUTHORITY SEMANTIC COMPLETE: NOT ESTABLISHED
+Unsatisfied or unevaluated predicates:
+• Fresh independent admission of reconstructed B1 contract.
+• Fresh independent admission of reconstructed B9 contract.
+• Recovery or verification of original Wave-7 authority.
+• Admission of pending classifier dependency.
+Next sequential action:
+Fresh independent admission session for UNSILO-B1-QUERY-DEFINITION-CONTRACT-RECONSTRUCTED-v1.0 and UNSILO-B9-OPERATOR-CONTRACT-RECONSTRUCTED-v1.0.
+Build authorization: NONE

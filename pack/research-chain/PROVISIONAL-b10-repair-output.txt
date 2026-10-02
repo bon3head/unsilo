@@ -1,0 +1,295 @@
+NOTE: Transcribed from the browser task's completion report of the B10 repair chat
+(https://chatgpt.com/g/g-p-6abd6123a014819192a3a400854f67b7-unsilo/c/6abe1c66-77a0-83ea-be72-52a925d15fba),
+October 1, 2026. Not byte-verified against the chat; cross-check before treating as verbatim evidence.
+
+Confirmed: the attached Foundation v2 artifact parsed successfully. I am governing this B10 session from the Foundation v2 sections:
+
+• Artifact 1 — RESEARCH-COMPLETE DEFINITION v2 → "B10 — Dependency closure and B12 integration" (§Blocker acceptance criteria, lines 373–380). This is the controlling B10 acceptance rule: named B10-closure-crosswalk and B10-proof-lifecycle-contract, reconstructed assertions, normative crosswalk, dependency coverage, lifecycle, stale/missing dependency behavior, and B12 integration.
+• Artifact 1 → "RECONSTRUCTED substitute for U-1R-AUTH-002 — twelve B10 assertions" (§265–300). This is the admitted reconstructed assertion target; it explicitly states the substitute is reconstructed, not original, and that B10 remains OPEN until crosswalk/verification occurs.
+• Artifact 1 → "RECONSTRUCTED evidence-class admission contract" (§118–189). This governs evidence-bearing claims and prohibits upgrading reconstructed artifacts, digests, or unresolved dependencies into stronger evidence classes without prerequisites.
+• Artifact 3 → "Mandatory end-of-session tail — v2" (§891–1045). This governs the required handoff structure.
+
+Authority track: RECONSTRUCTED-AUTHORITY only. No ORIGINAL-AUTHORITY claim is made. RECON-B10-CLOSURE-ASSERTIONS-v2.0 is consumed as reconstructed authority, not historical recovery. Foundation v2 itself states that reconstructed B10 closure assertions do not claim historical Wave-7 equivalence.
+
+# B10 Repair Worker Session — Reconstructed Closure Obligations Contract
+
+## Contract identity
+
+Artifact name: B10-closure-crosswalk-v2.0
+Status: FREEZE-CANDIDATE only
+Authority: RECONSTRUCTED-AUTHORITY
+Depends on:
+• Foundation v2 canonical SHA-256: 707269c9a2dd0029ca172aea8798e9719902596233ce54123c0c5a5c4bf2310f
+• RECON-B10-CLOSURE-ASSERTIONS-v2.0
+• RECON-ECLASS-PD-AO-DD-v2.0
+• Frozen/consumed semantics:
+◦ B1/B9/B2/B3: reconstructed-authority semantic complete prerequisites
+◦ B4/B7/B8: accepted-freeze contracts consumed
+◦ B5/B6/B11/B12: retained obligations, not replaced
+
+No blocker is frozen by this artifact alone.
+
+# 1. Closure-obligations contract
+
+## B10 closure obligation model
+
+Every emitted UnSilo result MUST be accompanied by a closure package proving that the result's meaning is reproducible under one pinned dependency world.
+
+A valid closure package contains:
+
+```
+ClosurePackage {
+    closure_id
+    query_or_finding_id
+    dependency_world_id
+    evidence_contract_version
+    source_dependencies[]
+    schema_dependencies[]
+    registry_dependencies[]
+    classification_dependencies[]
+    temporal_dependencies[]
+    composition_dependencies[]
+    comparison_dependencies[]
+    counterevidence_dependencies[]
+    computation_receipt
+    replay_requirements
+    verification_status
+}
+```
+
+Allowed lifecycle:
+
+```
+BUILDING → SEALED → VERIFIED
+```
+
+Invalid transitions:
+• BUILDING → VERIFIED
+• SEALED → VERIFIED without verification receipt
+• VERIFIED with changed dependency world
+
+A failed verification produces:
+
+```
+INVALID not VALUE.
+```
+
+This directly implements reconstructed assertions:
+• A01 Query-definition closure
+• A02 Compiler/execution closure
+• A03 Source/acquisition closure
+• A04 Mapping/projection closure
+• A05 Schema evolution closure
+• A06 Identity/registry closure
+• A07 Classification closure
+• A08 Temporal closure
+• A09 Population/composition closure
+• A10 Cross-version comparison closure
+• A11 Evidence/counterevidence closure
+• A12 Proof lifecycle/replay closure
+
+# 2. Evidence reference obligations
+
+Every dependency reference MUST be expressed as a digest-bound pointer, not as prose.
+
+```
+DependencyReference {
+    dependency_id
+    artifact_sha256
+    evidence_class
+    admission_status
+    captured_at
+}
+```
+
+Evidence-class assignment is mandatory and follows the RECONSTRUCTED evidence-class admission contract. RECON-ECLASS-PD-AO-DD-v2.0 remains UNADMITTED as classifier authority, so:
+
+• No reconstructed digest may be presented as classifier-admitted evidence.
+• Every evidence-bearing claim MUST cite one of: Foundation v2 admitted sections, frozen-blocker semantics, or verifier-issued receipts.
+• Any claim lacking such a citation MUST be marked UNVERIFIED and excluded from the freeze-candidate.
+• Unresolved dependencies MUST be listed explicitly and MUST fail closure unless a waiver is issued by the repair worker under the B10 acceptance criteria.
+
+# 3. Dependency hash contract
+
+The closure package MUST pin one dependency world and hash every dependency class:
+
+```
+DependencyWorld {
+    world_id
+    world_sha256
+    source_manifest_sha256
+    schema_snapshot_sha256
+    registry_snapshot_sha256
+    classifier_version_sha256
+    temporal_anchor_sha256
+    composition_spec_sha256
+    comparison_baseline_sha256
+    counterevidence_index_sha256
+}
+```
+
+Stale or missing dependencies:
+• A stale dependency (captured_at older than the evidence contract's freshness window) is treated as MISSING for verification.
+• A missing dependency fails the closure with reason "incomplete dependency world."
+• A waiver is permitted only if: (a) the missing class is identified, (b) the impact on reproducibility is documented, and (c) the repair worker signs the waiver under B10 acceptance criteria.
+
+No waiver may convert an UNVERIFIED claim into a verified one.
+
+# 4. Computation receipt contract
+
+Every closure package MUST include a computation receipt:
+
+```
+ComputationReceipt {
+    closure_id
+    executed_by
+    executed_at
+    inputs_sha256
+    transform_chain_sha256
+    outputs_sha256
+    witness_attestations[]
+}
+```
+
+Witness obligations:
+• At least one independent witness MUST attest the transform chain.
+• The witness attestation MUST bind inputs_sha256, transform_chain_sha256, and outputs_sha256 together.
+• A receipt with broken hash linkage is INVALID, not VALUE.
+
+# 5. Counterevidence obligations
+
+Counterevidence MUST be modeled as a first-class dependency class:
+
+```
+CounterevidenceIndex {
+    index_id
+    closure_id
+    counterevidence_items[]
+    disposition_per_item
+    unresolved_count
+}
+```
+
+For every counterevidence item:
+• Record its source, capture time, and evidence class.
+• Assign one disposition: ADDRESSED, OUT_OF_SCOPE, or UNRESOLVED.
+• UNRESOLVED items MUST remain in the closure package and MUST be counted in unresolved_count.
+• A closure package with unresolved_count > 0 CANNOT reach VERIFIED.
+
+The proof-lifecycle contract requires that counterevidence be re-evaluated on every SEALED → VERIFIED transition.
+
+# 6. Reproducibility package
+
+The reproducibility package is the deliverable a third party uses to replay the result:
+
+```
+ReproducibilityPackage {
+    closure_package
+    dependency_world
+    computation_receipt
+    counterevidence_index
+    replay_instructions
+    environment_spec
+}
+```
+
+Replay requirements:
+• replay_instructions MUST be ordered and complete.
+• environment_spec MUST be pinned compiler, runtime, and library versions.
+• The replay MUST be executable without access to ORIGINAL-AUTHORITY materials.
+• If replay requires missing state, the package MUST declare it and verification MUST fail with:
+
+```
+VERIFICATION = INVALID
+```
+
+# 7. Reconciliation against frozen and consumed semantics
+
+Reconciliation statement:
+
+• B1/B9 (RECONSTRUCTED-AUTHORITY SEMANTIC COMPLETE): the closure package's query-definition and execution closure (A01, A02) consume B1/B9 semantics without alteration. No B1/B9 contract text is rewritten.
+• B2/B3 (FROZEN): schema-evolution and identity/registry closure (A05, A06) consume B2/B3 semantics without alteration.
+• B4/B7/B8 (accepted-freeze, consumed only): classification (A07), temporal (A08), and composition (A09) closure consume B4/B7/B8 accepted-freeze contracts as inputs. They are referenced by digest, never modified.
+• B5/B6/B11/B12 (RETAINED): retained obligations are not repair targets. B12 integration is supported via the dependency_world's comparison_baseline_sha256 and the counterevidence index, but no B12 semantics are altered.
+
+No frozen or retained blocker is altered by this contract. Alteration would invalidate the freeze-candidate.
+
+# 8. Adversarial acceptance matrix
+
+| Assertion | Adversary | Expected result |
+|---|---|---|
+| A01–A12 coverage | "The crosswalk omits a dependency class." | Crosswalk lists all twelve classes with normative citations. |
+| Lifecycle enforcement | "A result shipped without SEALED." | Closure package rejected; BUILDING → VERIFIED is invalid. |
+| Hash binding | "A dependency was swapped post-seal." | world_sha256 mismatch → verification INVALID. |
+| Counterevidence suppression | "Unresolved counterevidence was dropped." | unresolved_count > 0 blocks VERIFIED. |
+| Evidence-class inflation | "A reconstructed digest was cited as admitted." | Claim marked UNVERIFIED; excluded from freeze-candidate. |
+| Original-authority smuggling | "The package cites original Wave-7 materials." | REJECTED; RECONSTRUCTED-AUTHORITY track only. |
+
+# 9. Freeze acceptance criteria
+
+This artifact is a FREEZE-CANDIDATE only. Freeze requires all of:
+
+• Fresh B10-closure-crosswalk and B10-proof-lifecycle-contract acceptance artifacts.
+• Verification receipts for the dependency world and computation receipt.
+• Golden closure artifacts replayed by an independent worker.
+• Counterevidence re-evaluation completed with unresolved_count = 0 or signed waivers.
+• No ORIGINAL-AUTHORITY claims present.
+
+Current status:
+
+```
+B10 = OPEN
+Reason:
+Contract authored, but fresh acceptance artifacts and verification are not yet supplied.
+```
+
+This artifact does NOT freeze B10. A repair worker session cannot self-freeze its own output.
+
+# 10. Mandatory tail v2
+
+1. Session identity
+   • Worker: UnSilo v1 repair worker
+   • Blocker: B10 (last OPEN blocker)
+   • Session: this chat
+   • Authority: RECONSTRUCTED-AUTHORITY only
+
+2. Authority lineage
+   • Foundation v2 attached and parsed.
+   • RECON-B10-CLOSURE-ASSERTIONS-v2.0 consumed as reconstructed authority.
+   • RECON-ECLASS-PD-AO-DD-v2.0 remains UNADMITTED as classifier authority.
+   • ORIGINAL-AUTHORITY COMPLETE unreachable and unused.
+
+3. Artifact produced
+   • B10-closure-crosswalk-v2.0 (FREEZE-CANDIDATE only)
+   • Sections 1–10 populated above.
+
+4. Frozen-blocker reconciliation
+   • Consumed without alteration: B1, B9, B2, B3, B4, B7, B8.
+   • Retained, not repair targets: B5, B6, B11, B12.
+
+5. Open items
+   • Fresh acceptance artifacts for B10-closure-crosswalk and B10-proof-lifecycle-contract.
+   • Independent verification receipts.
+   • Golden closure artifacts.
+   • Counterevidence re-evaluation.
+
+6. Risks
+   • Reconstructed authority cannot substitute for original Wave-7 materials.
+   • Any alteration of frozen semantics invalidates this candidate.
+   • Unresolved counterevidence blocks verification.
+
+7. Decision requested
+   • None in this session. This is a repair output, not an admission request.
+
+8. Checker guidance
+   • Verify all twelve assertions have normative crosswalk citations.
+   • Verify no ORIGINAL-AUTHORITY claims.
+   • Verify evidence-class discipline per the RECONSTRUCTED contract.
+   • Verify lifecycle transitions are legal.
+
+9. Handoff state
+   • B10 remains OPEN.
+   • This contract is a FREEZE-CANDIDATE awaiting acceptance artifacts.
+
+10. Program disposition
+    • Build authorization: NONE
