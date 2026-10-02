@@ -123,6 +123,37 @@ chats, not in local files. Summarize what the ledger establishes about
 them; never invent clause-level detail. The retained browser task for
 remediation step 5 is state-unknown; do not assert its contents.
 
+### 2.9 The master document (authoritative, in the pack)
+The full text of the operator's master architecture prompt is
+`pack/unsilo-master-architecture-prompt-2026-10-02.md`. It is AUTHORITATIVE
+for all program context in section 2. On any conflict between the section 2
+briefing here and the master document, the master document wins; record the
+conflict, do not silently resolve it. Primary artifacts beat both.
+
+### 2.10 Conformance obligations for the dashboard (from frozen contracts)
+The dashboard does not reinvent what the program already froze:
+- Temporal layer: conform to the FROZEN B4 contract (typed bound domain
+  KNOWN(v) | UNBOUNDED | UNKNOWN; universal entailment over admissible
+  completions: TRUE iff every completion entails the relation, FALSE iff
+  every completion entails its negation, else UNKNOWN; per-relation Allen
+  oracles; point times never UNBOUNDED; effective/knowledge separation).
+  The dashboard's interval design implements this contract, not a parallel
+  invention. The seven parked B4 proposals are judged against it.
+- SQLite layer: conform to the S6 B11 safety profile (SQLite >=3.37.0,
+  STRICT tables, WAL / synchronous FULL / 4096 / UTF-8, application_id
+  file identity, per-connection foreign_keys enforcement, integrity gates
+  fail-closed, INTEGER numerics, NULL != FALSE != QN != UR != domain
+  UNKNOWN with explicit UNKNOWN channels, join fanout proofs at declared
+  grain, FTS5 as disposable non-authoritative retrieval projection).
+- Claims may carry PD/AO/DD/QN/UR evidence class plus the WEAK modifier;
+  the dashboard's CONFIRMED/KILLED/DOWNGRADED/UNKNOWN verdict pills are
+  the audit-verdict axis, not the evidence-class axis. Do not conflate
+  them. A panel showing a claim SHOULD show both where available.
+- v1 claim shape: the feed surfaces public recruiting REPRESENTATIONS
+  (postings not openings, publisher-declared attributes, observation
+  history not ATS state, registrant statements, evidence-coverage
+  qualification), never claims about unobserved internal state.
+
 ## 3. The approved baseline, layer by layer
 
 The spec and data theory in `pack/` are the APPROVED baseline. They change
