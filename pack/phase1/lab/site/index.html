@@ -1,0 +1,3 @@
+<html><body><ul id=j></ul><script>
+fetch('/jobs.json').then(r=>r.json()).then(d=>{document.getElementById('j').innerHTML=d.jobs.map(x=>`<li data-id="${x.id}">${x.title}</li>`).join('')});
+</script></body></html>
